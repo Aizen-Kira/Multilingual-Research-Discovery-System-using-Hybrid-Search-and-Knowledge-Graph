@@ -1,0 +1,95 @@
+services:
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
+        VITE_PUBLIC_API_KEY: ${VITE_PUBLIC_API_KEY:-}
+    image: polyresearch-frontend:prod
+    container_name: polyresearch-frontend
+    init: true
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - polyresearch-net
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: docker/Dockerfile.prod
+    image: polyresearch-backend:prod
+    container_name: polyresearch-backend
+    init: true
+    restart: unless-stopped
+    env_file:
+      - ./Backend/.env
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      APP_LOG_DIR: /app/logs
+      REDIS_URL: redis://redis:6379/0
+      REQUIRE_PUBLIC_API_KEY: ${REQUIRE_PUBLIC_API_KEY:-true}
+      ENABLE_API_DOCS: ${ENABLE_API_DOCS:-false}
+      ALLOW_QUERY_STRING_API_KEY: ${ALLOW_QUERY_STRING_API_KEY:-false}
+      MIN_API_KEY_LENGTH: ${MIN_API_KEY_LENGTH:-32}
+    volumes:
+      - backend-models:/app/data
+      - backend-logs:/app/logs
+      - backend-training-data:/app/training_data
+    tmpfs:
+      - /tmp
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-4g}
+    cpus: ${BACKEND_CPUS:-4.0}
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    networks:
+      - polyresearch-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: polyresearch-redis
+    init: true
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - polyresearch-net
+
+volumes:
+  backend-models:
+  backend-logs:
+  backend-training-data:
+  redis-data:
+
+networks:
+  polyresearch-net:
+    driver: bridge

@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+env/
+.venv/
+pip-log.txt
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Docker
+*.tar
+
+# Logs
+logs/
+*.log
+
+# Training data (large, gitignore — use Docker volume)
+training_data/
+
+# Generated source dumps can accidentally include local secrets
+ALL FILES CODE.txt
+*ALL FILES CODE*.txt
+
+# ML model cache
+data/st_cache/
+data/hf_cache/
+*.bin
+*.safetensors
+*.pt
+*.ckpt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

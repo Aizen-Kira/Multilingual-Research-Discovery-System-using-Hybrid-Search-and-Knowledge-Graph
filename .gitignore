@@ -1,0 +1,98 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+Backend/.env
+Frontend/.env
+*.local
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+venv/
+env/
+.venv/
+pip-log.txt
+.python-version
+
+# Node / frontend
+node_modules/
+Frontend/node_modules/
+Frontend/dist/
+Frontend/dist-ssr/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+vite.out.log
+vite.err.log
+
+# Docker and runtime data
+*.tar
+docker-compose.override.yml
+Backend/logs/
+Backend/data/
+Backend/training_data/
+Backend/.pytest_cache/
+
+# ML/model caches and large binaries
+data/st_cache/
+data/hf_cache/
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.onnx
+
+# Generated/demo artifacts
+Backend/response.json
+ALL FILES CODE.txt
+*ALL FILES CODE*.txt
+*.log
+Frontend/*-capture.png
+Frontend/*-before.png
+Frontend/*-after.png
+Frontend/*-fixed*.png
+Frontend/*-final*.png
+Frontend/*-settled.png
+Frontend/*-settling.png
+Frontend/*-moving.png
+Frontend/landing-mobile-full-*.png
+!docs/screenshots/.gitkeep
+
+# IDE/editor
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

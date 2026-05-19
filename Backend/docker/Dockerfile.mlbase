@@ -1,0 +1,53 @@
+# ──────────────────────────────────────────────────────────────────
+# Generic ML Base Image
+# Reusable across any Python project needing torch + transformers
+#
+# Build once:
+#   docker build -f docker/Dockerfile.mlbase -t ml-base-cpu:v1 .
+#
+# Cached layers (never rebuild unless versions change):
+#   - torch 2.2.0 CPU
+#   - transformers 4.40.0
+#   - sentence-transformers 2.7.0
+#   - numpy 1.26.4
+#   - Pre-downloaded multilingual MiniLM model
+# ──────────────────────────────────────────────────────────────────
+FROM python:3.11-slim
+
+WORKDIR /opt/ml-base
+
+# System dependencies required for building ML packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Layer 1 — PyTorch CPU (largest download, ~800MB, cached forever)
+RUN pip install --no-cache-dir \
+    torch==2.2.0+cpu \
+    --index-url https://download.pytorch.org/whl/cpu
+
+# Layer 2 — Transformers ecosystem
+RUN pip install --no-cache-dir \
+    transformers==4.40.0 \
+    sentence-transformers==2.7.0 \
+    numpy==1.26.4
+
+# Layer 3 — Pre-download multilingual MiniLM model into image cache
+#            So containers start instantly without downloading at runtime
+ENV SENTENCE_TRANSFORMERS_HOME=/opt/ml-base/st_cache \
+    TRANSFORMERS_CACHE=/opt/ml-base/hf_cache \
+    HF_HOME=/opt/ml-base/hf_cache
+
+RUN python -c "\
+from sentence_transformers import SentenceTransformer; \
+model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'); \
+print('✅ Model downloaded and cached OK')"
+
+LABEL \
+    maintainer="generic" \
+    version="1.0" \
+    description="Reusable CPU ML base: torch 2.2 + transformers 4.40 + sentence-transformers 2.7 + MiniLM model" \
+    org.opencontainers.image.title="ml-base-cpu" \
+    org.opencontainers.image.version="1.0"

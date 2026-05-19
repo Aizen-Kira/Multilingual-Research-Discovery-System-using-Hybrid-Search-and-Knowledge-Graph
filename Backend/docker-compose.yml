@@ -1,0 +1,137 @@
+services:
+
+
+  # ── Redis ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: polyresearch-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    # ✅ FIX #1: DNS fix — ensures Redis container can resolve external hosts
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - polyresearch-net
+
+
+  # ── Backend ────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: polyresearch-backend:v3
+    container_name: polyresearch-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ml-models:/app/data
+      - ./logs:/app/logs
+      - ./training_data:/app/training_data
+
+
+    mem_limit: 4g
+    cpus: "4.0"
+
+
+    # ✅ FIX #1: Explicit DNS servers — fixes "Temporary failure in name resolution"
+    # for eutils.ncbi.nlm.nih.gov (PubMed) and any other external hosts inside Docker
+    dns:
+      - 8.8.8.8      # Google DNS primary
+      - 8.8.4.4      # Google DNS secondary
+      - 1.1.1.1      # Cloudflare DNS fallback
+
+
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      LLM_ANALYSIS_LIMIT: ${LLM_ANALYSIS_LIMIT:-15}
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      APP_LOG_DIR: /app/logs
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      PUBLIC_API_KEY: ${PUBLIC_API_KEY:-}
+      PUBLIC_API_RATE_LIMIT_PER_MINUTE: ${PUBLIC_API_RATE_LIMIT_PER_MINUTE:-6}
+      REQUIRE_PUBLIC_API_KEY: ${REQUIRE_PUBLIC_API_KEY:-true}
+      ENABLE_API_DOCS: ${ENABLE_API_DOCS:-false}
+
+
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_KEY: ${SUPABASE_KEY}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+
+
+      REDIS_URL: redis://redis:6379/0
+
+
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      HF_TOKEN: ${HF_TOKEN:-}
+      HF_MODEL_REPO: ${HF_MODEL_REPO:-}
+
+
+      EMBEDDING_MODEL: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+      EMBEDDING_DIMENSION: "384"
+      EMBEDDING_DEVICE: cpu
+      SENTENCE_TRANSFORMERS_HOME: /app/data/st_cache
+      TRANSFORMERS_CACHE: /app/data/hf_cache
+
+
+      MAX_PAPERS_PER_SEARCH: ${MAX_PAPERS_PER_SEARCH:-30}
+      MAX_PAPER_AGE_YEARS: ${MAX_PAPER_AGE_YEARS:-10}
+      MIN_ABSTRACT_WORDS: ${MIN_ABSTRACT_WORDS:-30}
+      RELATIONSHIP_SIMILARITY_THRESHOLD: "0.5"
+      REDIS_SEMANTIC_CACHE_THRESHOLD: "0.90"
+      CACHE_TTL: "3600"
+
+
+      AUTO_CLEANUP_ENABLED: "true"
+      CLEANUP_DAYS_OLD: "30"
+      MAX_PAPERS_LIMIT: "8000"
+
+
+      PYTHONUNBUFFERED: "1"
+
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+
+    networks:
+      - polyresearch-net
+
+
+# ── Named Volumes ──────────────────────────────────
+volumes:
+  redis-data:
+    name: polyresearch-redis-data
+  ml-models:
+    name: polyresearch-ml-models
+
+
+# ── Network ────────────────────────────────────────
+networks:
+  polyresearch-net:
+    name: polyresearch-network
+    driver: bridge
