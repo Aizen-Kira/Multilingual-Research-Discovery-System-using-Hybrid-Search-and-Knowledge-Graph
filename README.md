@@ -22,16 +22,19 @@ The project combines a React frontend, FastAPI backend, Redis caching, Supabase 
 
 ---
 
-# Project Architecture
+## Architecture Overview
 
 ```mermaid
 flowchart LR
-    User --> Frontend
-    Frontend --> Backend
-    Backend --> Redis
-    Backend --> Supabase
-    Backend --> ResearchAPIs
-    Backend --> LLMProviders
+  User["Researcher"] --> Frontend["React + Vite workspace"]
+  Frontend -->|/api requests| Nginx["Frontend Nginx reverse proxy"]
+  Nginx --> Backend["FastAPI backend"]
+  Frontend -->|Supabase anon key| SupabaseAuth["Supabase Auth"]
+  Backend --> Redis["Redis cache + rate limits"]
+  Backend --> Supabase["Supabase Postgres + pgvector"]
+  Backend --> Sources["Academic APIs"]
+  Backend --> LLMs["Gemini / Groq / OpenRouter"]
+  Supabase --> VectorSearch["pgvector similarity search"]
 ```
 
 ### Basic Workflow
